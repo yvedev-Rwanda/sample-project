@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, PackagePlus, AlertTriangle, Loader2 } from "lucide-react";
+import { Search, PackagePlus, AlertTriangle, Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -20,15 +20,15 @@ interface Category {
   name: string;
 }
 
-const empty = { name: "", category_id: "", price: 0, stock: 0, unit: "pcs", image: "", supplier_id: "" };
+const empty: any = { id: undefined, name: "", category_id: "", price: 0, stock: 0, unit: "pcs", image: "", supplier_id: "" };
 
 function ProductsPage() {
-  const [list, setList] = useState<Product[]>([]);
+  const [list, setList] = useState<any[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(empty);
+  const [form, setForm] = useState<any>(empty);
   const [search, setSearch] = useState("");
 
   const refresh = async () => {
@@ -61,6 +61,26 @@ function ProductsPage() {
     );
   }, [list, search]);
 
+  const edit = (p: any) => {
+    setForm({
+      ...p,
+      category_id: p.category_id?.toString() || "",
+      supplier_id: p.supplier_id?.toString() || ""
+    } as any);
+    setOpen(true);
+  };
+
+  const remove = async (id: any) => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+    try {
+      await api.delete(`/products/${id}`);
+      toast.success("Product removed from inventory");
+      refresh();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   async function save(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -71,8 +91,14 @@ function ProductsPage() {
         category_id: form.category_id ? Number(form.category_id) : null,
         supplier_id: form.supplier_id ? Number(form.supplier_id) : null
       };
-      await api.post("/products", payload);
-      toast.success("Product added successfully!");
+      
+      if (form.id) {
+        await api.put(`/products/${form.id}`, payload);
+        toast.success("Product details updated!");
+      } else {
+        await api.post("/products", payload);
+        toast.success("Product added successfully!");
+      }
       setOpen(false);
       setForm(empty);
       refresh();
@@ -88,7 +114,7 @@ function ProductsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Products</h1>
           <p className="text-muted-foreground">Manage your inventory and stock levels.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setForm(empty); }}>
           <DialogTrigger asChild>
             <Button className="shadow-lg" style={{ background: "var(--gradient-primary)" }}>
               <PackagePlus className="size-4 mr-2" /> Add Product
@@ -96,7 +122,7 @@ function ProductsPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Register New Product</DialogTitle>
+              <DialogTitle>{form.id ? "Edit Product Details" : "Register New Product"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={save} className="grid gap-4 py-4">
               <div className="space-y-2">
@@ -106,7 +132,7 @@ function ProductsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Category</Label>
-                  <Select value={form.category_id} onValueChange={(v) => setForm({ ...form, category_id: v })}>
+                  <Select value={form.category_id || ""} onValueChange={(v) => setForm({ ...form, category_id: v })}>
                     <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                     <SelectContent>
                       {categories.map((c) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
@@ -131,13 +157,13 @@ function ProductsPage() {
                   <Input id="price" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="stock">Initial Stock</Label>
+                  <Label htmlFor="stock">Stock Level</Label>
                   <Input id="stock" type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} required />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Supplier</Label>
-                <Select value={form.supplier_id} onValueChange={(v) => setForm({ ...form, supplier_id: v })}>
+                <Select value={form.supplier_id || ""} onValueChange={(v) => setForm({ ...form, supplier_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
                   <SelectContent>
                     {suppliers.map((s) => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}
@@ -145,7 +171,7 @@ function ProductsPage() {
                 </Select>
               </div>
               <Button type="submit" className="w-full mt-2" style={{ background: "var(--gradient-primary)" }}>
-                Save to Database
+                {form.id ? "Update Product" : "Save to Database"}
               </Button>
             </form>
           </DialogContent>
@@ -172,13 +198,14 @@ function ProductsPage() {
                 <TableHead className="font-bold">Category</TableHead>
                 <TableHead className="font-bold">Price</TableHead>
                 <TableHead className="font-bold">Stock Status</TableHead>
+                <TableHead className="font-bold text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                 <TableRow><TableCell colSpan={4} className="text-center py-12"><Loader2 className="size-6 animate-spin mx-auto" /></TableCell></TableRow>
+                 <TableRow><TableCell colSpan={5} className="text-center py-12"><Loader2 className="size-6 animate-spin mx-auto" /></TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-12 text-muted-foreground">No products found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">No products found.</TableCell></TableRow>
               ) : (
                 filtered.map((p) => (
                   <TableRow key={p.id} className="text-sm">
@@ -196,9 +223,19 @@ function ProductsPage() {
                           p.stock <= 5 ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
                         )}
                       >
-                        {p.stock} {(p as any).unit || 'pcs'}
+                        {p.stock} {p.unit || 'pcs'}
                         {p.stock <= 5 && <AlertTriangle className="size-3" />}
                       </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2 px-2">
+                        <Button variant="ghost" size="icon" className="size-8 text-blue-600" onClick={() => edit(p)}>
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="size-8 text-red-600" onClick={() => remove(p.id)}>
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

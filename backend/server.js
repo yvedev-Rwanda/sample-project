@@ -97,6 +97,22 @@ app.post('/api/customers', authenticateToken, (req, res) => {
     });
 });
 
+app.put('/api/customers/:id', authenticateToken, (req, res) => {
+    const { name, phone, address, email } = req.body;
+    db.query('UPDATE customers SET name = ?, phone = ?, address = ?, email = ? WHERE id = ?', 
+    [name, phone, address, email, req.params.id], (err) => {
+        if (err) res.status(500).send(err);
+        else res.json({ message: 'Customer updated' });
+    });
+});
+
+app.delete('/api/customers/:id', authenticateToken, (req, res) => {
+    db.query('DELETE FROM customers WHERE id = ?', [req.params.id], (err) => {
+        if (err) res.status(500).send(err);
+        else res.json({ message: 'Customer deleted' });
+    });
+});
+
 // --- PRODUCT ROUTES ---
 app.get('/api/products', authenticateToken, (req, res) => {
     db.query('SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.created_at DESC', (err, results) => {
@@ -114,10 +130,30 @@ app.post('/api/products', authenticateToken, (req, res) => {
     });
 });
 
+app.put('/api/products/:id', authenticateToken, (req, res) => {
+    const { name, category_id, price, stock, unit, image, supplier_id } = req.body;
+    db.query('UPDATE products SET name = ?, category_id = ?, price = ?, stock = ?, unit = ?, image = ?, supplier_id = ? WHERE id = ?',
+    [name, category_id, price, stock, unit, image, supplier_id, req.params.id], (err) => {
+        if (err) res.status(500).send(err);
+        else res.json({ message: 'Product updated' });
+    });
+});
+
+app.delete('/api/products/:id', authenticateToken, (req, res) => {
+    db.query('DELETE FROM products WHERE id = ?', [req.params.id], (err) => {
+        if (err) res.status(500).send(err);
+        else res.json({ message: 'Product deleted' });
+    });
+});
+
 // --- SALES ROUTES (Transaction) ---
 app.post('/api/sales', authenticateToken, (req, res) => {
-    const { customer_id, items } = req.body; // Expect items array: [{product_id, quantity, unit_price}]
+    let { customer_id, items } = req.body; // Expect items array: [{product_id, quantity, unit_price}]
     const cashier_id = req.user.id;
+    
+    // Fix: If customer_id is 0 or non-existent, set to null for MySQL foreign key
+    if (!customer_id || customer_id === 0) customer_id = null;
+    
     const total_amount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
 
     db.beginTransaction(err => {
@@ -183,6 +219,22 @@ app.post('/api/suppliers', authenticateToken, (req, res) => {
     [name, contact, email, address], (err, result) => {
         if (err) res.status(500).send(err);
         else res.status(201).json({ id: result.insertId, ...req.body });
+    });
+});
+
+app.put('/api/suppliers/:id', authenticateToken, (req, res) => {
+    const { name, contact, email, address } = req.body;
+    db.query('UPDATE suppliers SET name = ?, contact = ?, email = ?, address = ? WHERE id = ?',
+    [name, contact, email, address, req.params.id], (err) => {
+        if (err) res.status(500).send(err);
+        else res.json({ message: 'Supplier updated' });
+    });
+});
+
+app.delete('/api/suppliers/:id', authenticateToken, (req, res) => {
+    db.query('DELETE FROM suppliers WHERE id = ?', [req.params.id], (err) => {
+        if (err) res.status(500).send(err);
+        else res.json({ message: 'Supplier deleted' });
     });
 });
 

@@ -125,7 +125,7 @@ function SalesPage() {
 
     try {
       const payload = {
-        customer_id: Number(form.customerId),
+        customer_id: form.customerId ? Number(form.customerId) : null,
         items: [
           {
             product_id: Number(form.productId),

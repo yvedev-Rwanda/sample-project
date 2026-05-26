@@ -8,18 +8,18 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Search, Truck, Loader2 } from "lucide-react";
+import { Search, Truck, Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/suppliers")({ component: SuppliersPage });
 
-const empty = { name: "", contact: "", email: "", address: "" };
+const empty: any = { id: undefined, name: "", contact: "", email: "", address: "" };
 
 function SuppliersPage() {
-  const [list, setList] = useState<Supplier[]>([]);
+  const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(empty);
+  const [form, setForm] = useState<any>(empty);
   const [search, setSearch] = useState("");
 
   const refresh = async () => {
@@ -46,11 +46,32 @@ function SuppliersPage() {
     );
   }, [list, search]);
 
+  const edit = (s: any) => {
+    setForm({ ...s });
+    setOpen(true);
+  };
+
+  const remove = async (id: any) => {
+    if (!confirm("Are you sure you want to delete this supplier?")) return;
+    try {
+      await api.delete(`/suppliers/${id}`);
+      toast.success("Supplier removed from database");
+      refresh();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   async function save(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await api.post("/suppliers", form);
-      toast.success("New supplier added successfully!");
+      if (form.id) {
+        await api.put(`/suppliers/${form.id}`, form);
+        toast.success("Supplier information updated!");
+      } else {
+        await api.post("/suppliers", form);
+        toast.success("New supplier added successfully!");
+      }
       setOpen(false);
       setForm(empty);
       refresh();
@@ -66,7 +87,7 @@ function SuppliersPage() {
           <h1 className="text-3xl font-bold tracking-tight">Suppliers</h1>
           <p className="text-muted-foreground">Manage your inventory suppliers.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setForm(empty); }}>
           <DialogTrigger asChild>
             <Button className="shadow-lg" style={{ background: "var(--gradient-primary)" }}>
               <Truck className="size-4 mr-2" /> Add Supplier
@@ -74,7 +95,7 @@ function SuppliersPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>New Supplier Registration</DialogTitle>
+              <DialogTitle>{form.id ? "Edit Supplier Company" : "New Supplier Registration"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={save} className="space-y-4 py-4">
               <div className="space-y-2">
@@ -87,14 +108,14 @@ function SuppliersPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="semail">Email Address</Label>
-                <Input id="semail" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                <Input id="semail" type="email" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="saddress">Address</Label>
-                <Input id="saddress" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                <Input id="saddress" value={form.address || ""} onChange={(e) => setForm({ ...form, address: e.target.value })} />
               </div>
               <Button type="submit" className="w-full mt-4" style={{ background: "var(--gradient-primary)" }}>
-                Save Supplier
+                {form.id ? "Update Supplier" : "Save Supplier"}
               </Button>
             </form>
           </DialogContent>
@@ -121,13 +142,14 @@ function SuppliersPage() {
                 <TableHead className="font-bold">Contact</TableHead>
                 <TableHead className="font-bold">Email</TableHead>
                 <TableHead className="font-bold">Address</TableHead>
+                <TableHead className="font-bold text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-12"><Loader2 className="size-6 animate-spin mx-auto" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-12"><Loader2 className="size-6 animate-spin mx-auto" /></TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-12 text-muted-foreground">No suppliers found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">No suppliers found.</TableCell></TableRow>
               ) : (
                 filtered.map((s) => (
                   <TableRow key={s.id} className="hover:bg-muted/20 transition-colors">
@@ -135,6 +157,16 @@ function SuppliersPage() {
                     <TableCell>{s.contact}</TableCell>
                     <TableCell>{s.email || "---"}</TableCell>
                     <TableCell>{s.address || "---"}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2 px-2">
+                        <Button variant="ghost" size="icon" className="size-8 text-blue-600" onClick={() => edit(s)}>
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="size-8 text-red-600" onClick={() => remove(s.id)}>
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}

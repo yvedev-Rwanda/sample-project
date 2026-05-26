@@ -8,18 +8,18 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Search, UserPlus, Loader2 } from "lucide-react";
+import { Search, UserPlus, Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/customers")({ component: CustomersPage });
 
-const empty = { name: "", email: "", phone: "", address: "" };
+const empty: any = { id: undefined, name: "", email: "", phone: "", address: "" };
 
 function CustomersPage() {
   const [list, setList] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(empty);
+  const [form, setForm] = useState<any>(empty);
   const [search, setSearch] = useState("");
 
   const refresh = async () => {
@@ -46,11 +46,32 @@ function CustomersPage() {
     );
   }, [list, search]);
 
+  const edit = (c: Customer) => {
+    setForm({ ...c });
+    setOpen(true);
+  };
+
+  const remove = async (id: any) => {
+    if (!confirm("Are you sure you want to delete this customer?")) return;
+    try {
+      await api.delete(`/customers/${id}`);
+      toast.success("Customer removed from database");
+      refresh();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   async function save(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await api.post("/customers", form);
-      toast.success("New customer registered successfully!");
+      if (form.id) {
+        await api.put(`/customers/${form.id}`, form);
+        toast.success("Customer information updated!");
+      } else {
+        await api.post("/customers", form);
+        toast.success("New customer registered successfully!");
+      }
       setOpen(false);
       setForm(empty);
       refresh();
@@ -66,7 +87,7 @@ function CustomersPage() {
           <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
           <p className="text-muted-foreground">Manage your cooperative members and clients.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setForm(empty); }}>
           <DialogTrigger asChild>
             <Button className="shadow-lg" style={{ background: "var(--gradient-primary)" }}>
               <UserPlus className="size-4 mr-2" /> Add Customer
@@ -74,7 +95,7 @@ function CustomersPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Register New Customer</DialogTitle>
+              <DialogTitle>{form.id ? "Edit Customer Details" : "Register New Customer"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={save} className="space-y-4 py-4">
               <div className="space-y-2">
@@ -83,18 +104,18 @@ function CustomersPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email (Optional)</Label>
-                <Input id="email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@example.com" />
+                <Input id="email" type="email" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@example.com" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="07xxxxxxxx" />
+                <Input id="phone" value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="07xxxxxxxx" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="address">Address</Label>
-                <Input id="address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Location..." />
+                <Input id="address" value={form.address || ""} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Location..." />
               </div>
               <Button type="submit" className="w-full mt-4" style={{ background: "var(--gradient-primary)" }}>
-                Save to Database
+                {form.id ? "Update Member" : "Save to Database"}
               </Button>
             </form>
           </DialogContent>
@@ -121,13 +142,14 @@ function CustomersPage() {
                 <TableHead className="font-bold">Email</TableHead>
                 <TableHead className="font-bold">Phone</TableHead>
                 <TableHead className="font-bold">Address</TableHead>
+                <TableHead className="font-bold text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-12"><Loader2 className="size-6 animate-spin mx-auto" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-12"><Loader2 className="size-6 animate-spin mx-auto" /></TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-12">No customers found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-12">No customers found.</TableCell></TableRow>
               ) : (
                 filtered.map((c) => (
                   <TableRow key={c.id} className="hover:bg-muted/20 transition-colors">
@@ -135,6 +157,16 @@ function CustomersPage() {
                     <TableCell>{c.email || "---"}</TableCell>
                     <TableCell>{c.phone || "---"}</TableCell>
                     <TableCell>{c.address || "---"}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" className="size-8 text-blue-600" onClick={() => edit(c)}>
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="size-8 text-red-600" onClick={() => remove(c.id)}>
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
