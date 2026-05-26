@@ -89,5 +89,13 @@
   "main": "eslint.config.js",
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yvedev-Rwanda/sample-project.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yvedev-Rwanda/sample-project/issues"
+  },
+  "homepage": "https://github.com/yvedev-Rwanda/sample-project#readme"
 }

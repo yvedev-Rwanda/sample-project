@@ -19,13 +19,36 @@ export const api = {
   },
   async post(endpoint: string, data: any) {
     const res = await fetch(`${BASE_URL}${endpoint}`, {
-      method: 'POST',
+      method: "POST",
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.message || 'Ikosa ryabaye');
+      throw new Error(err.message || "Ikosa ryabaye");
+    }
+    return res.json();
+  },
+  async put(endpoint: string, data: any) {
+    const res = await fetch(`${BASE_URL}${endpoint}`, {
+      method: "PUT",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || "Ikosa ryabaye");
+    }
+    return res.json();
+  },
+  async delete(endpoint: string) {
+    const res = await fetch(`${BASE_URL}${endpoint}`, {
+      method: "DELETE",
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || "Ikosa ryabaye");
     }
     return res.json();
   },

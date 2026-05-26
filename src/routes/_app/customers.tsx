@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Pencil, Trash2, Search, UserPlus, Loader2 } from "lucide-react";
+import { Search, UserPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/customers")({ component: CustomersPage });
@@ -19,7 +19,6 @@ function CustomersPage() {
   const [list, setList] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Customer | null>(null);
   const [form, setForm] = useState(empty);
   const [search, setSearch] = useState("");
 
@@ -29,7 +28,7 @@ function CustomersPage() {
       const data = await api.get("/customers");
       setList(data);
     } catch (e) {
-      toast.error("Could not fetch customers from database");
+      toast.error("Could not fetch customers");
     } finally {
       setLoading(false);
     }
@@ -47,28 +46,13 @@ function CustomersPage() {
     );
   }, [list, search]);
 
-  function openNew() {
-    setEditing(null);
-    setForm(empty);
-    setOpen(true);
-  }
-  
-  function openEdit(c: Customer) {
-    setEditing(c);
-    setForm({ name: c.name, email: c.email || "", phone: c.phone || "", address: c.address || "" });
-    setOpen(true);
-  }
-
   async function save(e: React.FormEvent) {
     e.preventDefault();
     try {
-      if (editing) {
-        toast.info("Update not yet implemented on server (Focus on Add/List)");
-      } else {
-        await api.post("/customers", form);
-        toast.success("New customer registered in database!");
-      }
+      await api.post("/customers", form);
+      toast.success("New customer registered successfully!");
       setOpen(false);
+      setForm(empty);
       refresh();
     } catch (err: any) {
       toast.error(err.message);
@@ -84,18 +68,18 @@ function CustomersPage() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button onClick={openNew} className="shadow-lg" style={{ background: "var(--gradient-primary)" }}>
+            <Button className="shadow-lg" style={{ background: "var(--gradient-primary)" }}>
               <UserPlus className="size-4 mr-2" /> Add Customer
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>{editing ? "Edit Customer Info" : "Register New Customer"}</DialogTitle>
+              <DialogTitle>Register New Customer</DialogTitle>
             </DialogHeader>
             <form onSubmit={save} className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
-                <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Enter name here..." />
+                <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Enter name..." />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email (Optional)</Label>
@@ -110,7 +94,7 @@ function CustomersPage() {
                 <Input id="address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Location..." />
               </div>
               <Button type="submit" className="w-full mt-4" style={{ background: "var(--gradient-primary)" }}>
-                {editing ? "Update Info" : "Save to Database"}
+                Save to Database
               </Button>
             </form>
           </DialogContent>
@@ -137,25 +121,13 @@ function CustomersPage() {
                 <TableHead className="font-bold">Email</TableHead>
                 <TableHead className="font-bold">Phone</TableHead>
                 <TableHead className="font-bold">Address</TableHead>
-                <TableHead className="text-right font-bold px-6">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12">
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                      <Loader2 className="size-5 animate-spin" />
-                      Loading customers...
-                    </div>
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={4} className="text-center py-12"><Loader2 className="size-6 animate-spin mx-auto" /></TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-12">
-                    {search ? "No customers match your search." : "No customers found in database."}
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-12">No customers found.</TableCell></TableRow>
               ) : (
                 filtered.map((c) => (
                   <TableRow key={c.id} className="hover:bg-muted/20 transition-colors">
@@ -163,26 +135,6 @@ function CustomersPage() {
                     <TableCell>{c.email || "---"}</TableCell>
                     <TableCell>{c.phone || "---"}</TableCell>
                     <TableCell>{c.address || "---"}</TableCell>
-                    <TableCell className="text-right px-6">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => openEdit(c)}
-                          className="hover:text-primary hover:bg-primary/10"
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => toast.info("Delete not yet implemented")}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
                   </TableRow>
                 ))
               )}

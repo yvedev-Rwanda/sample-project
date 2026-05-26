@@ -90,8 +90,8 @@ app.get('/api/customers', authenticateToken, (req, res) => {
 });
 
 app.post('/api/customers', authenticateToken, (req, res) => {
-    const { name, phone, address } = req.body;
-    db.query('INSERT INTO customers (name, phone, address) VALUES (?, ?, ?)', [name, phone, address], (err, result) => {
+    const { name, phone, address, email } = req.body;
+    db.query('INSERT INTO customers (name, phone, address, email) VALUES (?, ?, ?, ?)', [name, phone, address, email], (err, result) => {
         if (err) res.status(500).send(err);
         else res.status(201).json({ id: result.insertId, ...req.body });
     });
@@ -177,6 +177,15 @@ app.get('/api/suppliers', authenticateToken, (req, res) => {
     });
 });
 
+app.post('/api/suppliers', authenticateToken, (req, res) => {
+    const { name, contact, email, address } = req.body;
+    db.query('INSERT INTO suppliers (name, contact, email, address) VALUES (?, ?, ?, ?)', 
+    [name, contact, email, address], (err, result) => {
+        if (err) res.status(500).send(err);
+        else res.status(201).json({ id: result.insertId, ...req.body });
+    });
+});
+
 // --- REPORT ROUTES ---
 app.get('/api/reports/detailed', authenticateToken, (req, res) => {
     const query = `
@@ -191,15 +200,6 @@ app.get('/api/reports/detailed', authenticateToken, (req, res) => {
     db.query(query, (err, results) => {
         if (err) res.status(500).send(err);
         else res.json(results);
-    });
-});
-
-app.post('/api/suppliers', authenticateToken, (req, res) => {
-    const { name, contact, email, address } = req.body;
-    db.query('INSERT INTO suppliers (name, contact, email, address) VALUES (?, ?, ?, ?)', 
-    [name, contact, email, address], (err, result) => {
-        if (err) res.status(500).send(err);
-        else res.status(201).json({ id: result.insertId, ...req.body });
     });
 });
 
