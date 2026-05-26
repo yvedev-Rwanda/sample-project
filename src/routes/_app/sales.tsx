@@ -15,23 +15,36 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/sales")({ component: SalesPage });
 
-function ReceiptModal({ sale, customerName, items, onClose }: { sale: any, customerName: string, items: any[], onClose: () => void }) {
+function ReceiptModal({ sale, onClose }: { sale: any, onClose: () => void }) {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (sale) {
+      setLoading(true);
+      api.get(`/sales/${sale.id}/items`)
+        .then(setItems)
+        .catch(() => toast.error("Could not fetch receipt items"))
+        .finally(() => setLoading(false));
+    }
+  }, [sale]);
+
   const print = () => window.print();
 
   return (
-    <Dialog open={!!sale} onOpenChange={onClose}>
+    <Dialog open={!!sale} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden bg-white text-black">
         <div id="printable-receipt" className="p-8 space-y-6 text-black font-sans print:p-0">
           <div className="text-center space-y-1">
             <h2 className="text-xl font-bold uppercase tracking-tight">Tuzamurane Cooperative</h2>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Sales Information Management</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Sales Information Management System</p>
             <div className="h-px bg-border my-4" />
           </div>
 
           <div className="space-y-1 text-xs">
-            <div className="flex justify-between"><span>Receipt No:</span><span className="font-mono">#{sale.id}</span></div>
-            <div className="flex justify-between"><span>Date:</span><span>{new Date(sale.date).toLocaleString()}</span></div>
-            <div className="flex justify-between"><span>Cashier:</span><span>{sale.cashier_name}</span></div>
+            <div className="flex justify-between"><span>Receipt No:</span><span className="font-mono">#{sale?.id}</span></div>
+            <div className="flex justify-between"><span>Date:</span><span>{sale ? new Date(sale.date).toLocaleString() : ""}</span></div>
+            <div className="flex justify-between"><span>Cashier:</span><span>{sale?.cashier_name}</span></div>
           </div>
 
           <div className="border-y py-4 space-y-2">
@@ -39,7 +52,9 @@ function ReceiptModal({ sale, customerName, items, onClose }: { sale: any, custo
               <span>Item</span>
               <span>Total</span>
             </div>
-            {items.length > 0 ? items.map((item, i) => (
+            {loading ? (
+              <div className="py-4 text-center"><Loader2 className="size-4 animate-spin mx-auto text-muted-foreground" /></div>
+            ) : items.length > 0 ? items.map((item, i) => (
               <div key={i} className="flex justify-between text-xs">
                 <span>{item.product_name} x {item.quantity}</span>
                 <span>{(item.quantity * item.unit_price).toLocaleString()} RWF</span>
@@ -47,14 +62,14 @@ function ReceiptModal({ sale, customerName, items, onClose }: { sale: any, custo
             )) : (
                 <div className="flex justify-between text-xs">
                 <span>Transaction Total</span>
-                <span>{Number(sale.total_amount).toLocaleString()} RWF</span>
+                <span>{Number(sale?.total_amount).toLocaleString()} RWF</span>
               </div>
             )}
           </div>
 
           <div className="flex justify-between items-end border-t pt-4">
             <span className="text-sm font-bold uppercase">Grand Total</span>
-            <span className="text-xl font-black">{Number(sale.total_amount)?.toLocaleString()} RWF</span>
+            <span className="text-xl font-black">{Number(sale?.total_amount)?.toLocaleString()} RWF</span>
           </div>
 
           <div className="text-center pt-6 space-y-2">
@@ -66,7 +81,7 @@ function ReceiptModal({ sale, customerName, items, onClose }: { sale: any, custo
         </div>
         <div className="p-4 bg-muted/30 border-t flex gap-2 justify-end print:hidden">
           <Button variant="outline" onClick={onClose}>Close</Button>
-          <Button onClick={print} style={{ background: "var(--gradient-primary)" }}>
+          <Button onClick={print} style={{ background: "var(--gradient-primary)" }} disabled={loading}>
             <Printer className="size-4 mr-2" /> Print Receipt
           </Button>
         </div>
@@ -285,8 +300,6 @@ function SalesPage() {
       {receiptSale && (
         <ReceiptModal
           sale={receiptSale}
-          customerName={receiptSale.customer_name || "Guest"}
-          items={[]} 
           onClose={() => setReceiptSale(null)}
         />
       )}

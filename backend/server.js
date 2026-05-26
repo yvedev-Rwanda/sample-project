@@ -205,6 +205,17 @@ app.get('/api/sales', authenticateToken, (req, res) => {
     });
 });
 
+app.get('/api/sales/:id/items', authenticateToken, (req, res) => {
+    db.query(`
+        SELECT si.*, p.name as product_name 
+        FROM sale_items si 
+        JOIN products p ON si.product_id = p.id 
+        WHERE si.sale_id = ?`, [req.params.id], (err, results) => {
+        if (err) res.status(500).send(err);
+        else res.json(results);
+    });
+});
+
 // --- SUPPLIER ROUTES ---
 app.get('/api/suppliers', authenticateToken, (req, res) => {
     db.query('SELECT * FROM suppliers ORDER BY name ASC', (err, results) => {
